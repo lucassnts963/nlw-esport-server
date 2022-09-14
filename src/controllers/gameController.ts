@@ -1,53 +1,47 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { convertMinutesToHoursString } from '../utils/convert-minutes-to-hours-string';
-import { convertHourStringToMinutes } from '../utils/convert-hour-string-to-minutes';
 
-const prisma = new PrismaClient();
+import {
+  convertMinutesToHoursString,
+  convertHourStringToMinutes,
+} from '../utils';
+
+import {
+  FindAllGames,
+  CreateGame,
+  FindAllAdsByGame,
+  CreateAd,
+} from '../use-cases';
+
+import {
+  PrismaGameRepository,
+  PrismaAdsRepository,
+} from '../repository/prisma';
+
+const gameRepository = new PrismaGameRepository();
+const adRepository = new PrismaAdsRepository();
 
 export class GameController {
   static async findAll(request: Request, response: Response) {
-    const games = await prisma.game.findMany({
-      include: {
-        _count: {
-          select: {
-            ads: true,
-          },
-        },
-      },
-    });
+    const findAllGames = new FindAllGames(gameRepository);
+    const games = await findAllGames.execute();
     return response.status(200).json(games);
   }
   static async create(request: Request, response: Response) {
+    //TODO: Validação (Zod JavaScript)
     const body: any = request.body;
-    const game = await prisma.game.create({
-      data: {
-        title: body.title,
-        bannerUrl: body.bannerUrl,
-      },
+    const createGame = new CreateGame(gameRepository);
+    const game = await createGame.execute({
+      title: body.title,
+      bannerUrl: body.bannerUrl,
     });
 
     return response.status(201).json(game);
   }
   static async findAllAdsByGame(request: Request, response: Response) {
     const gameId: string = request.params.id;
-    const ads = await prisma.ad.findMany({
-      select: {
-        id: true,
-        name: true,
-        weekDays: true,
-        useVoiceChannel: true,
-        yearsPlaying: true,
-        hourStart: true,
-        hourEnd: true,
-      },
-      where: {
-        gameId,
-      },
-      orderBy: {
-        createAt: 'desc',
-      },
-    });
+    const findAllAds = new FindAllAdsByGame(gameRepository);
+    const ads = await findAllAds.execute({ gameId });
+
     return response.status(200).json(
       ads.map((ad) => {
         return {
@@ -63,19 +57,19 @@ export class GameController {
     const gameId: string = request.params.id;
     const body: any = request.body;
 
+    const createAd = new CreateAd(adRepository);
+
     //TODO: Validação (Zod JavaScript)
 
-    const ad = await prisma.ad.create({
-      data: {
-        gameId,
-        name: body.name,
-        yearsPlaying: body.yearsPlaying,
-        discord: body.discord,
-        weekDays: body.weekDays.join(','),
-        hourStart: convertHourStringToMinutes(body.hourStart),
-        hourEnd: convertHourStringToMinutes(body.hourEnd),
-        useVoiceChannel: body.useVoiceChannel,
-      },
+    const ad = await createAd.execute({
+      gameId,
+      name: body.name,
+      yearsPlaying: body.yearsPlaying,
+      discord: body.discord,
+      weekDays: body.weekDays.join(','),
+      hourStart: convertHourStringToMinutes(body.hourStart),
+      hourEnd: convertHourStringToMinutes(body.hourEnd),
+      useVoiceChannel: body.useVoiceChannel,
     });
 
     return response.status(201).json(ad);

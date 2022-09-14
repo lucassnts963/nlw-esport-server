@@ -1,20 +1,17 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaAdsRepository } from '../repository/prisma';
 
-const prisma = new PrismaClient();
+import { GetDiscordByAd } from '../use-cases';
+
+const adsRepository = new PrismaAdsRepository();
 
 export class AdController {
   static async getDiscord(request: Request, response: Response) {
     const adId = request.params.id;
 
-    const ad = await prisma.ad.findUniqueOrThrow({
-      select: {
-        discord: true,
-      },
-      where: {
-        id: adId,
-      },
-    });
+    const getDiscordByAd = new GetDiscordByAd(adsRepository);
+
+    const ad = await getDiscordByAd.execute({ adId });
 
     return response.status(200).json({
       discord: ad.discord,
