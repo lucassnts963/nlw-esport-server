@@ -4,7 +4,7 @@ import cors from 'cors';
 import routes from './routes';
 
 const PORT = Number(process.env.PORT) || 3333;
-const HOST = process.env.HOST || 'localhost';
+const HOST = process.env.HOST || '192.168.254.132';
 
 const app = express();
 
